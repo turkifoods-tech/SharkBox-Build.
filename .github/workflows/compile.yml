@@ -1,0 +1,37 @@
+name: Build SharkOs Binary
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Install Arduino CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
+          export PATH=$PATH:$(pwd)/bin
+
+      - name: Setup ESP32 Support
+        run: |
+          bin/arduino-cli config init
+          bin/arduino-cli config set board_manager.additional_urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+          bin/arduino-cli core update-index
+          bin/arduino-cli core install esp32:esp32
+
+      - name: Install Libraries
+        run: |
+          bin/arduino-cli lib install "Keypad"
+          bin/arduino-cli lib install "TFT_eSPI"
+          bin/arduino-cli lib install "TJpg_Decoder"
+
+      - name: Compile SharkOs
+        run: |
+          bin/arduino-cli compile --fqbn esp32:esp32:esp32s3 --output-dir ./build SharkOs.ino
+
+      - name: Upload Binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: SharkBox-Firmware
+          path: ./build/*.bin
